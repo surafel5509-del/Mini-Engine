@@ -99,7 +99,12 @@ val compileVulkanShaders = tasks.register("compileVulkanShaders") {
     }
 }
 
-tasks.named("preBuild").configure { dependsOn(compileVulkanShaders) }
+// The GLES build does not consume SPIR-V assets. Only require glslc when
+// explicitly selecting Vulkan, so a missing Vulkan toolchain cannot block
+// the default Android editor APK.
+if (engineRenderer == "vulkan") {
+    tasks.named("preBuild").configure { dependsOn(compileVulkanShaders) }
+}
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
