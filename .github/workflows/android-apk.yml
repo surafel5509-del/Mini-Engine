@@ -55,6 +55,17 @@ jobs:
       - name: Assemble debug APK
         run: gradle --no-daemon --console=plain --stacktrace -p editor -PminiRenderer=gles3 :app:assembleDebug
 
+      - name: Verify JNI symbols are in the APK
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/mini-engine-apk-check"
+          unzip -q editor/app/build/outputs/apk/debug/app-debug.apk -d "$RUNNER_TEMP/mini-engine-apk-check"
+          for abi in arm64-v8a armeabi-v7a; do
+            library="$RUNNER_TEMP/mini-engine-apk-check/lib/$abi/libminiengine.so"
+            test -s "$library"
+            readelf --dyn-syms --wide "$library" | grep -q 'Java_com_miniengine_editor_bridge_NativeBridge_nativeInit'
+          done
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
