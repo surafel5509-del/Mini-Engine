@@ -5,6 +5,7 @@ import android.util.Log
 import java.io.File
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import com.miniengine.editor.ui.EditorScreen
 import com.miniengine.editor.ui.theme.MiniEngineTheme
@@ -14,13 +15,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
 
         // Copy the bundled sample project to app-private storage. The
         // native asset importer uses ordinary filesystem paths for glTF.
         val sampleDir = File(filesDir, "CarScene")
         try {
-            copyAssetTree("CarScene", sampleDir)
+            if (!File(sampleDir, "scene.json").isFile) {
+                copyAssetTree("CarScene", sampleDir)
+            }
             if (assets.list("vulkan").orEmpty().isNotEmpty()) {
                 copyAssetTree("vulkan", File(filesDir, "MiniEngine/shaders"))
             }

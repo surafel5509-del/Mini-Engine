@@ -1,4 +1,6 @@
 #include "mini/engine/Engine.h"
+#include <algorithm>
+#include <cmath>
 #include <fstream>
 #include "mini/core/Log.h"
 #include "mini/render/VulkanRenderer.h"
@@ -77,6 +79,7 @@ void Engine::render() {
     mRenderer->beginFrame(view, proj);
 
     world.each<MeshRenderer>([&](Entity e, MeshRenderer& mr) {
+        if (!mr.visible) return;
         AssetId meshId = mr.mesh;
         if (meshId == kNullAsset && !mr.primitive.empty()) {
             meshId = mAssets.createPrimitive(mr.primitive);
@@ -101,6 +104,7 @@ void Engine::render() {
 
     // Imported models: one draw per mesh primitive.
     world.each<ModelRenderer>([&](Entity e, ModelRenderer& mr) {
+        if (!mr.visible) return;
         const Transform* t = world.get<Transform>(e);
         if (!t) return;
         Mat4 model = t->localMatrix();
@@ -154,7 +158,9 @@ bool Engine::loadSceneFromFile(const std::string& path) {
 
 Entity Engine::createEntity(const std::string& name, const std::string& primitive) {
     Entity e = mScene->createEntity(name);
-    if (!primitive.empty()) {
+    if (primitive == "directional_light") {
+        mScene->world().set<Light>(e, Light{});
+    } else if (!primitive.empty()) {
         MeshRenderer mr;
         mr.primitive = primitive;
         mr.mesh = mAssets.createPrimitive(primitive);
@@ -164,6 +170,40 @@ Entity Engine::createEntity(const std::string& name, const std::string& primitiv
 }
 
 void Engine::destroyEntity(Entity e) { mScene->destroyEntity(e); }
+
+bool Engine::setEntityVisible(const std::string& name, bool visible) {
+    World& world = mScene->world();
+    bool matched = false;
+    for (Entity entity = 1; entity < world.nextId(); ++entity) {
+        if (!world.isAlive(entity)) continue;
+        const Name* entityName = world.get<Name>(entity);
+        if (!entityName || entityName->value != name) continue;
+        matched = true;
+        if (MeshRenderer* mesh = world.get<MeshRenderer>(entity)) mesh->visible = visible;
+        if (ModelRenderer* model = world.get<ModelRenderer>(entity)) model->visible = visible;
+        if (Light* light = world.get<Light>(entity)) light->enabled = visible;
+    }
+    return matched;
+}
+
+bool Engine::adjustEntityTransform(const std::string& name, int property, int axis, float delta) {
+    if (property < 0 || property > 1 || axis < 0 || axis > 2 || !std::isfinite(delta))
+        return false;
+    World& world = mScene->world();
+    for (Entity entity = 1; entity < world.nextId(); ++entity) {
+        if (!world.isAlive(entity)) continue;
+        const Name* entityName = world.get<Name>(entity);
+        if (!entityName || entityName->value != name) continue;
+        Transform* transform = world.get<Transform>(entity);
+        if (!transform) return false;
+        Vec3& vector = property == 0 ? transform->position : transform->scale;
+        float* values[] = {&vector.x, &vector.y, &vector.z};
+        *values[axis] += delta;
+        if (property == 1) *values[axis] = std::max(0.01f, *values[axis]);
+        return true;
+    }
+    return false;
+}
 
 std::string Engine::sceneToJson() const { return mScene->toJson(); }
 

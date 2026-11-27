@@ -10,7 +10,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,15 +37,22 @@ fun NativeViewport(
     scenePath: String,
     backend: String = "gles3",
     shaderPath: String = "",
+    isPlaying: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val surface = remember(context) {
+    val playingState = rememberUpdatedState(isPlaying)
+    var rendererStatus by remember { mutableStateOf("Starting GLES3 renderer…") }
+    val surface = remember(context, scenePath, backend, shaderPath) {
         GLSurfaceView(context).apply {
             setEGLContextClientVersion(3)
             preserveEGLContextOnPause = true
-            setRenderer(EditorRenderer(scenePath, backend, shaderPath))
+            setRenderer(
+                EditorRenderer(scenePath, backend, shaderPath, { playingState.value }) {
+                    rendererStatus = it
+                },
+            )
             renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
         }
     }
@@ -79,14 +90,17 @@ fun NativeViewport(
             modifier = Modifier.fillMaxSize(),
         )
         Text(
-            text = "GLES3 · Native Scene",
+            text = rendererStatus,
             color = Color.White,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             modifier = Modifier
-                .align(Alignment.BottomStart)
+                .align(if (rendererStatus.startsWith("Ready")) Alignment.BottomStart else Alignment.Center)
                 .padding(8.dp)
-                .background(Color(0xCC20242A), RoundedCornerShape(4.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .background(
+                    if (rendererStatus.startsWith("Ready")) Color(0xCC20242A) else Color(0xEE7A302A),
+                    RoundedCornerShape(6.dp),
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         )
     }
 }
@@ -95,25 +109,49 @@ private class EditorRenderer(
     private val scenePath: String,
     private val backend: String,
     private val shaderPath: String,
+    private val isPlaying: () -> Boolean,
+    private val onStatus: (String) -> Unit,
 ) : Renderer {
     private var lastFrameNanos = 0L
     private var engineReady = false
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         lastFrameNanos = 0L
-        engineReady = NativeBridge.init(1280, 720, backend, shaderPath)
-        if (engineReady) {
-            val sceneFile = File(scenePath)
-            if (sceneFile.isFile && !NativeBridge.loadSceneFile(sceneFile.absolutePath)) {
-                Log.e("MiniEngine", "Native engine failed to load sample scene: $scenePath")
+        engineReady = false
+        try {
+            engineReady = NativeBridge.init(1280, 720, backend, shaderPath)
+            if (!engineReady) {
+                onStatus("Renderer initialization failed — check the native library and GLES 3 support")
+                return
             }
-        } else {
-            Log.e("MiniEngine", "Native engine initialization failed")
+            val sceneFile = File(scenePath)
+            if (!sceneFile.isFile) {
+                onStatus("Sample scene is missing: ${sceneFile.name}")
+                return
+            }
+            if (!NativeBridge.loadSceneFile(sceneFile.absolutePath)) {
+                engineReady = false
+                onStatus("Scene failed to load — check the bundled CarScene assets")
+                Log.e("MiniEngine", "Native engine failed to load sample scene: $scenePath")
+            } else {
+                onStatus("Ready · CarScene")
+            }
+        } catch (t: Throwable) {
+            engineReady = false
+            onStatus("Native startup error: ${t.javaClass.simpleName}")
+            Log.e("MiniEngine", "Native renderer startup failed", t)
         }
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-        if (engineReady && width > 0 && height > 0) NativeBridge.resize(width, height)
+        if (!engineReady || width <= 0 || height <= 0) return
+        try {
+            NativeBridge.resize(width, height)
+        } catch (t: Throwable) {
+            engineReady = false
+            onStatus("Viewport resize failed: ${t.javaClass.simpleName}")
+            Log.e("MiniEngine", "Native viewport resize failed", t)
+        }
     }
 
     override fun onDrawFrame(gl: GL10?) {
@@ -122,7 +160,13 @@ private class EditorRenderer(
         val dt = if (lastFrameNanos == 0L) 1f / 60f
         else ((now - lastFrameNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
         lastFrameNanos = now
-        NativeBridge.tick(dt)
-        NativeBridge.render()
+        try {
+            if (isPlaying()) NativeBridge.tick(dt)
+            NativeBridge.render()
+        } catch (t: Throwable) {
+            engineReady = false
+            onStatus("Render stopped: ${t.javaClass.simpleName}")
+            Log.e("MiniEngine", "Native frame failed", t)
+        }
     }
 }

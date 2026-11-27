@@ -64,6 +64,8 @@ jobs:
             library="$RUNNER_TEMP/mini-engine-apk-check/lib/$abi/libminiengine.so"
             test -s "$library"
             readelf --dyn-syms --wide "$library" | grep -q 'Java_com_miniengine_editor_bridge_NativeBridge_nativeInit'
+            readelf --dyn-syms --wide "$library" | grep -q 'Java_com_miniengine_editor_bridge_NativeBridge_nativeSetEntityVisible'
+            readelf --dyn-syms --wide "$library" | grep -q 'Java_com_miniengine_editor_bridge_NativeBridge_nativeAdjustEntityTransform'
           done
 
       - name: Upload APK artifact

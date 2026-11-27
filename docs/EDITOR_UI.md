@@ -1,20 +1,11 @@
-# Editor UI spec (mirrors reference screenshot)
+# Editor UI
 
-Dark theme editor, four regions + top bar:
+The editor uses a dark, responsive layout with a shared scene viewport and three working docks:
 
-- **Top bar**: back, blue **Publish** button, save, undo/redo icons,
-  center: camera / play / settings, right: **Scene Settings** tab.
-- **Left — Hierarchy**: search field, "Scene Settings" header, entity list
-  (Camera, Directional Light, UI Canvas, Animation Director, U Car,
-  Circle Asphalt Plane) with visibility toggles.
-- **Center — Viewport**: rendered scene, "Camera Preview" chip bottom-left.
-- **Right — Inspector**: **Environment** section with Skybox Texture
-  thumbnails, Skybox Rotation slider, Skybox Tint, Skybox Exposure (0.6),
-  Ambient Intensity (0.89), Reflection Intensity (0.73), Reset button.
-- **Bottom — Assets**: left tree (Assets / Built-in Assets / My Assets /
-  Logic / Built-in Logic / My Logic), grid of built-in assets:
-  Empty, Directional Light, Cube, Sphere, Plane, Cylinder, Capsule, Quad,
-  UI Canvas, Button, Text, Input Field, Image, Toggle, Web View.
+- **Wide screens (840 dp and up):** toolbar; Hierarchy / Viewport / Inspector columns; bottom Assets browser.
+- **Compact landscape:** viewport beside a tabbed Hierarchy / Inspector / Assets dock.
+- **Phones and narrow windows:** compact toolbar and viewport above a tabbed dock. Android safe-drawing insets keep controls clear of the status and navigation bars.
 
-All panels are live: sliders update `EnvironmentSettings` in the
-ViewModel and push to the native engine through `NativeBridge`.
+The Assets dock uses a scrollable category selector on phones and shows only content the engine can currently create. Built-in primitives create mesh entities; Directional Light creates a real ECS light; Empty Entity creates a transform/name entity. Visibility toggles affect mesh, model and light rendering. Other asset and logic categories remain visibly empty until import and runtime systems are implemented.
+
+The Inspector exposes the bundled City Dusk environment and a procedural sky, along with rotation, tint, exposure, ambient, reflection, and reset controls. Skybox selection only offers sources that are actually available. GLES startup/scene-load failures are surfaced in the viewport rather than leaving an unexplained black panel.

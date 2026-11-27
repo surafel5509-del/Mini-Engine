@@ -122,10 +122,12 @@ std::string Scene::toJson() const {
         if (const MeshRenderer* mr = mWorld.get<MeshRenderer>(e)) {
             os << ",\n      \"primitive\": \"" << json::escape(mr->primitive) << "\""
                << ",\n      \"color\": [" << mr->tint[0] << ", " << mr->tint[1]
-               << ", " << mr->tint[2] << "]";
+               << ", " << mr->tint[2] << "]"
+               << ",\n      \"visible\": " << (mr->visible ? "true" : "false");
         }
         if (const ModelRenderer* mr = mWorld.get<ModelRenderer>(e))
-            os << ",\n      \"model\": \"" << json::escape(mr->path) << "\"";
+            os << ",\n      \"model\": \"" << json::escape(mr->path) << "\""
+               << ",\n      \"visible\": " << (mr->visible ? "true" : "false");
         if (const ScriptComponent* script = mWorld.get<ScriptComponent>(e))
             os << ",\n      \"scriptKey\": \"" << json::escape(script->scriptKey) << "\""
                << ",\n      \"scriptEnabled\": " << (script->enabled ? "true" : "false");
@@ -235,11 +237,15 @@ bool Scene::fromJson(const std::string& json) {
                 if (readVec3(ej.find("color"), tint)) {
                     mr.tint[0] = tint.x; mr.tint[1] = tint.y; mr.tint[2] = tint.z;
                 }
+                if (const Value* visible = ej.find("visible"); visible &&
+                    visible->type == Value::Type::Bool) mr.visible = visible->boolean;
                 mWorld.set<MeshRenderer>(e, mr);
             } else if (c.str == "model") {
                 ModelRenderer mr;
                 if (const Value* p = ej.find("model"); p && p->isString())
                     mr.path = p->str;
+                if (const Value* visible = ej.find("visible"); visible &&
+                    visible->type == Value::Type::Bool) mr.visible = visible->boolean;
                 mWorld.set<ModelRenderer>(e, mr);
             } else if (c.str == "script") {
                 ScriptComponent script;

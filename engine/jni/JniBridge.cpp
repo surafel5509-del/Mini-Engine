@@ -126,6 +126,24 @@ Java_com_miniengine_editor_bridge_NativeBridge_nativeDestroyEntity(
     if (gEngine) gEngine->destroyEntity(static_cast<mini::Entity>(entity));
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_miniengine_editor_bridge_NativeBridge_nativeSetEntityVisible(
+        JNIEnv* env, jobject, jstring name, jboolean visible) {
+    std::lock_guard<std::mutex> lock(gEngineMutex);
+    if (!gEngine) return JNI_FALSE;
+    return gEngine->setEntityVisible(jstringToStd(env, name), visible == JNI_TRUE)
+        ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_miniengine_editor_bridge_NativeBridge_nativeAdjustEntityTransform(
+        JNIEnv* env, jobject, jstring name, jint property, jint axis, jfloat delta) {
+    std::lock_guard<std::mutex> lock(gEngineMutex);
+    if (!gEngine) return JNI_FALSE;
+    return gEngine->adjustEntityTransform(jstringToStd(env, name), property, axis, delta)
+        ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT void JNICALL
 Java_com_miniengine_editor_bridge_NativeBridge_nativeSetEnvironment(
         JNIEnv* env, jobject, jstring skybox, jfloat rotation,

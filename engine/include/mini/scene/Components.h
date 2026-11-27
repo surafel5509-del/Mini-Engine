@@ -31,6 +31,7 @@ struct ScriptComponent {
 struct ModelRenderer {
     std::string path;                 // e.g. "models/car.gltf"
     std::vector<AssetId> meshes;      // resolved by the engine
+    bool visible = true;
 };
 
 struct MeshRenderer {
@@ -39,6 +40,7 @@ struct MeshRenderer {
     std::string primitive;      // built-in primitive name ("cube", ...) or empty
     float tint[3] = {1, 1, 1};  // base color multiplier
     bool castShadows = true;
+    bool visible = true;
 };
 
 struct Camera {

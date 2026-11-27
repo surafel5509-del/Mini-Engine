@@ -43,13 +43,14 @@ fun Viewport(
     scenePath: String = "",
     rendererBackend: String = "gles3",
     shaderPath: String = "",
+    isPlaying: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     if (scenePath.isNotBlank() && com.miniengine.editor.bridge.NativeBridge.isAvailable) {
         if (rendererBackend.equals("vulkan", ignoreCase = true)) {
-            VulkanViewport(scenePath, shaderPath, modifier)
+            VulkanViewport(scenePath, shaderPath, isPlaying, modifier)
         } else {
-            NativeViewport(scenePath, rendererBackend, shaderPath, modifier)
+            NativeViewport(scenePath, rendererBackend, shaderPath, isPlaying, modifier)
         }
         return
     }

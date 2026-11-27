@@ -29,25 +29,18 @@ data class BuiltInAsset(
 /** The built-in asset catalog (bottom panel), matching the reference UI. */
 object AssetCatalog {
     val builtIn: List<BuiltInAsset> = listOf(
-        BuiltInAsset("Empty", null, "⬡"),
-        BuiltInAsset("Directional Light", null, "🔦"),
+        BuiltInAsset("Empty Entity", null, "⬡"),
+        BuiltInAsset("Directional Light", "directional_light", "🔦"),
         BuiltInAsset("Cube", "cube", "⬛"),
         BuiltInAsset("Sphere", "sphere", "⚪"),
         BuiltInAsset("Plane", "plane", "▭"),
         BuiltInAsset("Cylinder", "cylinder", "🛢"),
         BuiltInAsset("Capsule", "capsule", "💊"),
         BuiltInAsset("Quad", "quad", "◻"),
-        BuiltInAsset("UI Canvas", null, "🖼"),
-        BuiltInAsset("Button", null, "🔘"),
-        BuiltInAsset("Text", null, "T"),
-        BuiltInAsset("Input Field", null, "⌨"),
-        BuiltInAsset("Image", null, "🖼"),
-        BuiltInAsset("Toggle", null, "☑"),
-        BuiltInAsset("Web View", null, "🌐"),
     )
 
-    /** Skybox texture thumbnails shown in the Inspector. */
+    /** Only environment sources currently bundled with the editor. */
     val skyboxes: List<String> = listOf(
-        "city_dusk", "city_day", "studio", "sunset", "night", "forest", "ocean",
+        "environment/city_dusk.ppm", "",
     )
 }

@@ -1,5 +1,6 @@
 package com.miniengine.editor.viewmodel
 
+import android.util.AtomicFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.miniengine.editor.bridge.NativeBridge
@@ -10,8 +11,12 @@ import com.miniengine.editor.model.HierarchyItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 /** Immutable snapshot of everything the editor UI renders. */
 data class EditorUiState(
@@ -66,10 +71,46 @@ class EditorViewModel : ViewModel() {
     }
 
     fun toggleVisibility(name: String) {
+        var newVisibility = true
         _state.update { s ->
             s.copy(hierarchy = s.hierarchy.map {
-                if (it.name == name) it.copy(visible = !it.visible) else it
+                if (it.name == name) {
+                    newVisibility = !it.visible
+                    it.copy(visible = newVisibility)
+                } else it
             })
+        }
+        NativeBridge.setEntityVisible(name, newVisibility)
+    }
+
+    fun adjustEntityTransform(name: String, property: Int, axis: Int, delta: Float) {
+        NativeBridge.adjustEntityTransform(name, property, axis, delta)
+    }
+
+    fun saveScene(path: String) {
+        viewModelScope.launch {
+            val message = withContext(Dispatchers.IO) {
+                runCatching {
+                    require(path.isNotBlank()) { "Scene path is empty" }
+                    val json = NativeBridge.sceneToJson()
+                    require(json != "{}" && json.contains("\"entities\"")) {
+                        "The native scene is not ready yet"
+                    }
+                    val target = AtomicFile(File(path))
+                    var stream: FileOutputStream? = null
+                    try {
+                        val output = target.startWrite()
+                        stream = output
+                        output.write(json.toByteArray(Charsets.UTF_8))
+                        target.finishWrite(output)
+                    } catch (t: Throwable) {
+                        stream?.let { output -> runCatching { target.failWrite(output) } }
+                        throw t
+                    }
+                    "Scene saved"
+                }.getOrElse { "Save failed: ${it.message ?: it.javaClass.simpleName}" }
+            }
+            _state.update { it.copy(publishMessage = message) }
         }
     }
 
@@ -82,9 +123,10 @@ class EditorViewModel : ViewModel() {
 
     /** Spawn a built-in asset into the scene (bottom panel tap). */
     fun spawnAsset(asset: BuiltInAsset) {
-        val primitive = asset.primitive ?: return
         viewModelScope.launch {
-            val id = NativeBridge.createEntity(asset.name, primitive)
+            // Non-mesh scene objects (empty entities, lights, UI placeholders)
+            // are still real entities; the native engine accepts an empty primitive.
+            val id = NativeBridge.createEntity(asset.name, asset.primitive.orEmpty())
             if (id != 0) {
                 _state.update { s ->
                     s.copy(hierarchy = s.hierarchy + HierarchyItem(asset.name, isSelected = true))

@@ -33,7 +33,12 @@ import java.io.File
 
 /** Experimental Vulkan surface path. Select with -PminiRenderer=vulkan. */
 @Composable
-fun VulkanViewport(scenePath: String, shaderPath: String, modifier: Modifier = Modifier) {
+fun VulkanViewport(
+    scenePath: String,
+    shaderPath: String,
+    isPlaying: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var surfaceReady by remember { mutableStateOf(false) }
@@ -82,14 +87,14 @@ fun VulkanViewport(scenePath: String, shaderPath: String, modifier: Modifier = M
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(surfaceReady, resumed) {
+    LaunchedEffect(surfaceReady, resumed, isPlaying) {
         var last = System.nanoTime()
         while (surfaceReady && resumed) {
             val now = System.nanoTime()
             val dt = ((now - last) / 1_000_000_000f).coerceIn(0f, 0.1f)
             last = now
             withContext(Dispatchers.Default) {
-                NativeBridge.tick(dt)
+                if (isPlaying) NativeBridge.tick(dt)
                 NativeBridge.render()
             }
             delay(16)

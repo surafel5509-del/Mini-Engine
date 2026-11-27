@@ -268,6 +268,10 @@ int main() {
     serializedCamera.priority = 4;
     serializedCamera.nearPlane = 0.25f;
     systemsScene.world().set<Camera>(serializedEntity, serializedCamera);
+    MeshRenderer serializedMesh;
+    serializedMesh.primitive = "cube";
+    serializedMesh.visible = false;
+    systemsScene.world().set<MeshRenderer>(serializedEntity, serializedMesh);
     Light serializedLight;
     serializedLight.type = LightType::Spot;
     serializedLight.range = 18.0f;
@@ -281,6 +285,7 @@ int main() {
     assert(systemsRoundTrip.fromJson(systemsScene.toJson()));
     const Entity roundTripEntity = 1;
     assert(systemsRoundTrip.world().get<Camera>(roundTripEntity)->priority == 4);
+    assert(!systemsRoundTrip.world().get<MeshRenderer>(roundTripEntity)->visible);
     assert(systemsRoundTrip.world().get<Light>(roundTripEntity)->type == LightType::Spot);
     assert(std::abs(systemsRoundTrip.world().get<RigidBody>(roundTripEntity)->mass - 4.0f) < 1e-6f);
     assert(systemsRoundTrip.world().get<ScriptComponent>(roundTripEntity)->scriptKey == "probe");
@@ -359,11 +364,27 @@ int main() {
     // --- Editor-style operations ---
     Entity e = engine.createEntity("New Cube", "cube");
     assert(e != kNullEntity);
-    const MeshRenderer* newMesh = engine.scene().world().get<MeshRenderer>(e);
+    MeshRenderer* newMesh = engine.scene().world().get<MeshRenderer>(e);
     assert(newMesh);
     const Asset* newAsset = engine.assets().get(newMesh->mesh);
     assert(newAsset && newAsset->mesh.cacheKey == newAsset->id);
+    assert(engine.setEntityVisible("New Cube", false));
+    assert(!newMesh->visible);
+    assert(engine.setEntityVisible("New Cube", true));
+    assert(newMesh->visible);
+    assert(engine.adjustEntityTransform("New Cube", 0, 0, 0.25f));
+    assert(std::abs(engine.scene().world().get<Transform>(e)->position.x - 0.25f) < 1e-6f);
+    assert(engine.adjustEntityTransform("New Cube", 1, 2, 0.5f));
+    assert(std::abs(engine.scene().world().get<Transform>(e)->scale.z - 1.5f) < 1e-6f);
     engine.destroyEntity(e);
+
+    Entity light = engine.createEntity("Editor Light", "directional_light");
+    assert(light != kNullEntity);
+    Light* editorLight = engine.scene().world().get<Light>(light);
+    assert(editorLight && editorLight->enabled);
+    assert(engine.setEntityVisible("Editor Light", false));
+    assert(!editorLight->enabled);
+    engine.destroyEntity(light);
     engine.setEnvironment(EnvironmentSettings{});
     std::string json = engine.sceneToJson();
     assert(!json.empty() && json.find("\"name\"") != std::string::npos);

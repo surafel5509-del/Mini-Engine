@@ -52,6 +52,13 @@ object NativeBridge {
 
     fun destroyEntity(entity: Int) { if (loaded) nativeDestroyEntity(entity) }
 
+    fun setEntityVisible(name: String, visible: Boolean): Boolean =
+        loaded && nativeSetEntityVisible(name, visible)
+
+    /** property 0 = position, 1 = scale; axis 0/1/2 = X/Y/Z. */
+    fun adjustEntityTransform(name: String, property: Int, axis: Int, delta: Float): Boolean =
+        loaded && nativeAdjustEntityTransform(name, property, axis, delta)
+
     fun setEnvironment(env: EnvironmentSettings) {
         if (!loaded) return
         nativeSetEnvironment(
@@ -76,6 +83,8 @@ object NativeBridge {
     private external fun nativeSceneToJson(): String
     private external fun nativeCreateEntity(name: String, primitive: String): Int
     private external fun nativeDestroyEntity(entity: Int)
+    private external fun nativeSetEntityVisible(name: String, visible: Boolean): Boolean
+    private external fun nativeAdjustEntityTransform(name: String, property: Int, axis: Int, delta: Float): Boolean
     private external fun nativeSetEnvironment(
         skybox: String, rotation: Float,
         tintR: Float, tintG: Float, tintB: Float,

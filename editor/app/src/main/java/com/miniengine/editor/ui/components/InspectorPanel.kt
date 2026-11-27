@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -27,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.miniengine.editor.model.AssetCatalog
 import com.miniengine.editor.model.EnvironmentSettings
 
 /**
@@ -40,6 +42,8 @@ fun InspectorPanel(
     onEnvironmentChange: (EnvironmentSettings) -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
+    selectedEntity: String? = null,
+    onAdjustTransform: (String, Int, Int, Float) -> Unit = { _, _, _, _ -> },
 ) {
     Column(
         modifier = modifier
@@ -49,16 +53,25 @@ fun InspectorPanel(
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("Environment", color = Color.White, fontSize = 14.sp)
+        if (selectedEntity != null) {
+            Text("Selected Object", color = Color.White, fontSize = 14.sp)
+            Text(selectedEntity, color = Color(0xFF2D9CDB), fontSize = 12.sp)
+            TransformAdjustRow("Position", selectedEntity, property = 0, step = 0.25f, onAdjustTransform)
+            TransformAdjustRow("Scale", selectedEntity, property = 1, step = 0.1f, onAdjustTransform)
+        }
 
+        Text("Scene Environment", color = Color.White, fontSize = 14.sp)
         Text("Skybox Texture", color = Color(0xFFAAAAAA), fontSize = 12.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            AssetCatalog.skyboxes.forEach { name ->
-                val selected = environment.skyboxTexture == name
+        val availableSkyboxes = listOf(
+            "City dusk" to "environment/city_dusk.ppm",
+            "Procedural" to "",
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(availableSkyboxes) { (label, path) ->
                 BoxThumb(
-                    label = name.take(2).uppercase(),
-                    selected = selected,
-                    onClick = { onEnvironmentChange(environment.copy(skyboxTexture = name)) },
+                    label = label,
+                    selected = environment.skyboxTexture == path,
+                    onClick = { onEnvironmentChange(environment.copy(skyboxTexture = path)) },
                 )
             }
         }
@@ -126,11 +139,42 @@ fun InspectorPanel(
 }
 
 @Composable
+private fun TransformAdjustRow(
+    label: String,
+    entity: String,
+    property: Int,
+    step: Float,
+    onAdjust: (String, Int, Int, Float) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, color = Color(0xFFAAAAAA), fontSize = 12.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            listOf("X", "Y", "Z").forEachIndexed { axis, axisLabel ->
+                Text(axisLabel, color = Color(0xFF888888), fontSize = 10.sp)
+                androidx.compose.material3.IconButton(
+                    onClick = { onAdjust(entity, property, axis, -step) },
+                    modifier = Modifier.size(28.dp),
+                ) { Text("−", color = Color.White, fontSize = 15.sp) }
+                androidx.compose.material3.IconButton(
+                    onClick = { onAdjust(entity, property, axis, step) },
+                    modifier = Modifier.size(28.dp),
+                ) { Text("+", color = Color.White, fontSize = 14.sp) }
+            }
+        }
+    }
+}
+
+@Composable
 private fun BoxThumb(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(34.dp)
-            .clip(RoundedCornerShape(4.dp))
+            .width(78.dp)
+            .height(48.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(Color(0xFF4A5A6A))
             .border(
                 2.dp,

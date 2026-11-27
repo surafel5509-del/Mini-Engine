@@ -37,6 +37,8 @@ public:
     bool loadSceneFromFile(const std::string& path);
     Entity createEntity(const std::string& name, const std::string& primitive = "");
     void destroyEntity(Entity e);
+    bool setEntityVisible(const std::string& name, bool visible);
+    bool adjustEntityTransform(const std::string& name, int property, int axis, float delta);
     std::string sceneToJson() const;
     std::vector<std::string> hierarchyNames() const;
 
