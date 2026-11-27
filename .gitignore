@@ -1,0 +1,19 @@
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+# C++ / CMake
+engine/build/
+editor/app/build/
+# Native
+*.so
+*.o
+*.a
+# Python
+__pycache__/
+*.py[cod]
+
+# OS
+.DS_Store
